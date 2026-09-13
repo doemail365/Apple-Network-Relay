@@ -674,7 +674,7 @@ https://relay.example.ch:6443/.well-known/masque
 
 Ein Browser verwendet beim ersten Aufruf möglicherweise HTTP/2. Der tatsächliche Relaybetrieb sollte anschließend auch eingehende UDP-Pakete zeigen.
 
-## 15. Apple-Mobileconfig für Intune
+## 15. Apple-Mobileconfig verteilen
 
 Der zentrale Teil des Relay-Payloads:
 
@@ -712,7 +712,34 @@ Beispiel für On-Demand:
 </array>
 ```
 
-Das Profil kann in Intune als benutzerdefiniertes Apple-Konfigurationsprofil verteilt werden. Zunächst sollte immer nur ein Testgerät zugewiesen werden.
+### Verteilung über ein MDM-System
+
+Microsoft Intune ist nur eine mögliche Lösung. Die `.mobileconfig` kann auch über andere MDM-Anbieter verteilt werden, sofern diese benutzerdefinierte Apple-Konfigurationsprofile unterstützen.
+
+Eine MDM-Verteilung bietet insbesondere folgende Vorteile:
+
+- zentrale Zuweisung an Geräte oder Benutzer
+- kontrollierte Aktualisierung und Entfernung des Profils
+- nachvollziehbarer Installationsstatus
+- kein manueller Installationsschritt auf jedem Gerät
+
+Zunächst sollte das Profil immer nur einem Testgerät beziehungsweise einer kleinen Testgruppe zugewiesen werden.
+
+### Manuelle Installation ohne MDM
+
+Für kleine oder private Installationen kann die `.mobileconfig` auch ohne MDM von Hand installiert werden. Sie kann beispielsweise als E-Mail-Anhang an das Apple-Gerät gesendet oder über einen geschützten Webserver beziehungsweise AirDrop bereitgestellt werden.
+
+Nach dem Öffnen der Datei muss der Benutzer die Profilinstallation auf dem Gerät ausdrücklich bestätigen. Je nach Betriebssystem erscheint das geladene Profil anschließend in den Einstellungen und wird dort installiert.
+
+Bei dieser Variante gelten folgende Einschränkungen:
+
+- Installation, Aktualisierung und Entfernung erfolgen auf jedem Gerät manuell.
+- Ein geändertes Profil muss erneut verteilt und installiert werden.
+- Das Profil sollte nur aus einer vertrauenswürdigen Quelle geöffnet werden.
+- Zugangsdaten, API-Token, private Schlüssel und andere Geheimnisse dürfen nicht in einer öffentlich oder unverschlüsselt verteilten `.mobileconfig` enthalten sein.
+- Für eine öffentliche oder größere Verteilung sollte das Profil kryptografisch signiert oder über ein verwaltetes MDM-System bereitgestellt werden.
+
+Die Relay-Funktion selbst ist nicht an Intune gebunden. Entscheidend ist, dass das Apple-Gerät das gültige Relay-Profil installiert hat und den konfigurierten Relay-Server erreichen kann.
 
 ## 16. Datagram-Drops überwachen
 
