@@ -14,8 +14,8 @@ Das Beispiel verwendet zwei voneinander getrennte Relay-Instanzen:
 
 | Instanz | DMZ | interne Adresse | öffentlicher Port | interner Port |
 |---|---|---|---:|---:|
-| Adults | VLAN 30 | `172.16.30.10` | `59443` TCP/UDP | `443` TCP/UDP |
-| Kids | VLAN 40 | `172.16.40.10` | `58443` TCP/UDP | `443` TCP/UDP |
+| Adults | VLAN 30 | `172.16.30.10` | `6443` TCP/UDP | `443` TCP/UDP |
+| Kids | VLAN 40 | `172.16.40.10` | `5443` TCP/UDP | `443` TCP/UDP |
 
 Beide Instanzen verwenden denselben öffentlichen Hostnamen `relay.example.ch`. Die unterschiedlichen öffentlichen Ports bestimmen, an welche VM OPNsense den Verkehr weiterleitet.
 
@@ -28,7 +28,7 @@ Apple-Gerät
     |
     | HTTPS / HTTP/3
     v
-relay.example.ch:59443 oder :58443
+relay.example.ch:6443 oder :5443
     |
     v
 OPNsense Destination NAT
@@ -224,7 +224,7 @@ Verzeichnis erstellen:
 mkdir -p /etc/envoy
 ```
 
-Die folgende Konfiguration ist das Adults-Beispiel für den öffentlichen Port `59443`. Envoy selbst lauscht intern auf TCP und UDP 443.
+Die folgende Konfiguration ist das Adults-Beispiel für den öffentlichen Port `6443`. Envoy selbst lauscht intern auf TCP und UDP 443.
 
 Datei `/etc/envoy/envoy.yaml`:
 
@@ -324,14 +324,14 @@ static_resources:
               response_headers_to_add:
               - header:
                   key: alt-svc
-                  value: 'h3=":59443"; ma=2592000'
+                  value: 'h3=":6443"; ma=2592000'
               routes:
               - match:
                   path: "/.well-known/masque"
                 direct_response:
                   status: 200
                   body:
-                    inline_string: '{"proxy-ports":[59443]}'
+                    inline_string: '{"proxy-ports":[6443]}'
                 response_headers_to_add:
                 - header:
                     key: content-type
@@ -416,14 +416,14 @@ static_resources:
               response_headers_to_add:
               - header:
                   key: alt-svc
-                  value: 'h3=":59443"; ma=2592000'
+                  value: 'h3=":6443"; ma=2592000'
               routes:
               - match:
                   path: "/.well-known/masque"
                 direct_response:
                   status: 200
                   body:
-                    inline_string: '{"proxy-ports":[59443]}'
+                    inline_string: '{"proxy-ports":[6443]}'
                 response_headers_to_add:
                 - header:
                     key: content-type
@@ -470,7 +470,7 @@ static_resources:
           dns_lookup_family: ALL
 ```
 
-Für die Kids-Instanz müssen alle Vorkommen von `59443` durch `58443` ersetzt werden. Außerdem sind Hostname, IP-Adressen und DMZ-Zuordnung anzupassen.
+Für die Kids-Instanz müssen alle Vorkommen von `6443` durch `5443` ersetzt werden. Außerdem sind Hostname, IP-Adressen und DMZ-Zuordnung anzupassen.
 
 Konfiguration prüfen:
 
@@ -566,7 +566,7 @@ Version:              IPv4
 Protocol:             TCP/UDP
 Source:               any
 Destination:          WAN address
-Destination port:     59443
+Destination port:     6443
 Redirect target IP:   Envoy_DMZAdults_v4
 Redirect target port: 443
 ```
@@ -579,7 +579,7 @@ Version:              IPv4
 Protocol:             TCP/UDP
 Source:               any
 Destination:          WAN address
-Destination port:     58443
+Destination port:     5443
 Redirect target IP:   Envoy_DMZKids_v4
 Redirect target port: 443
 ```
@@ -588,7 +588,7 @@ Für beide Regeln muss eine passende WAN-Passregel vorhanden sein. TCP wird für
 
 ### Hinweis zu eingehendem IPv6
 
-Das oben beschriebene Port-Mapping ist IPv4 Destination NAT. Bei nativem IPv6 wird normalerweise nicht auf unterschiedliche interne Hosts übersetzt. Ein gemeinsamer AAAA-Record kann deshalb nicht allein anhand der Ports `58443` und `59443` auf zwei verschiedene VMs zeigen.
+Das oben beschriebene Port-Mapping ist IPv4 Destination NAT. Bei nativem IPv6 wird normalerweise nicht auf unterschiedliche interne Hosts übersetzt. Ein gemeinsamer AAAA-Record kann deshalb nicht allein anhand der Ports `5443` und `6443` auf zwei verschiedene VMs zeigen.
 
 Mögliche Lösungen sind getrennte Hostnamen/AAAA-Records, ein zusätzlicher IPv6-Frontend-Proxy oder zunächst ausschließlich eingehendes IPv4. Der ausgehende Verkehr der Envoy-VMs kann trotzdem dual-stack über IPv4 und IPv6 erfolgen.
 
@@ -600,10 +600,10 @@ Apple Network Relay verwendet in der Konfiguration eine Relay-URL mit einem DNS-
 
 ```xml
 <!-- Adults -->
-<string>https://relay.example.ch:59443/</string>
+<string>https://relay.example.ch:6443/</string>
 
 <!-- Kids -->
-<string>https://relay.example.ch:58443/</string>
+<string>https://relay.example.ch:5443/</string>
 ```
 
 Bei einem Wechsel der öffentlichen IPv4-Adresse aktualisiert OPNsense beziehungsweise `os-ddclient` den A-Record von `relay.example.ch`. Die Destination-NAT-Regeln bleiben unverändert, da sie weiterhin an die aktuelle WAN-Adresse gebunden sind. Auch das TLS-Zertifikat muss nicht wegen des IP-Wechsels ersetzt werden, weil es für den DNS-Namen ausgestellt ist.
@@ -655,7 +655,7 @@ curl --http3-only \
 Erwartete Adults-Antwort:
 
 ```json
-{"proxy-ports":[59443]}
+{"proxy-ports":[6443]}
 ```
 
 ## 14. Externer Test
@@ -669,7 +669,7 @@ tcpdump -ni ens18 'tcp port 443 or udp port 443'
 Von einem externen Anschluss:
 
 ```text
-https://relay.example.ch:59443/.well-known/masque
+https://relay.example.ch:6443/.well-known/masque
 ```
 
 Ein Browser verwendet beim ersten Aufruf möglicherweise HTTP/2. Der tatsächliche Relaybetrieb sollte anschließend auch eingehende UDP-Pakete zeigen.
@@ -683,14 +683,14 @@ Der zentrale Teil des Relay-Payloads:
 <array>
     <dict>
         <key>HTTP2RelayURL</key>
-        <string>https://relay.example.ch:59443/</string>
+        <string>https://relay.example.ch:6443/</string>
         <key>HTTP3RelayURL</key>
-        <string>https://relay.example.ch:59443/</string>
+        <string>https://relay.example.ch:6443/</string>
     </dict>
 </array>
 ```
 
-Für Kids wird Port `58443` verwendet. Adults- und Kids-Profil müssen jeweils eigene `PayloadIdentifier` und `PayloadUUID` besitzen.
+Für Kids wird Port `5443` verwendet. Adults- und Kids-Profil müssen jeweils eigene `PayloadIdentifier` und `PayloadUUID` besitzen.
 
 Beispiel für On-Demand:
 
